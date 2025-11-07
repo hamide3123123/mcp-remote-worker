@@ -1,0 +1,32 @@
+name: Docker Debug
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug-docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Debug Secret
+        run: |
+          echo "==================================="
+          echo "🔍 SECRET DEBUG"
+          echo "==================================="
+          echo "Secret exists: ${{ secrets.DOCKER_HUB_TOKEN != '' }}"
+          echo ""
+          echo "Token length: ${#DOCKER_HUB_TOKEN}"
+          echo "Token first 10 chars: ${DOCKER_HUB_TOKEN:0:10}"
+          echo "Token last 6 chars: ${DOCKER_HUB_TOKEN: -6}"
+          echo "==================================="
+        env:
+          DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
+      
+      - name: Test Login - From Secret
+        run: |
+          echo "🔐 Testing login with secret..."
+          echo "$DOCKER_HUB_TOKEN" | docker login -u test123434sdd --password-stdin
+          echo "✅ Secret token works!"
+        env:
+          DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
