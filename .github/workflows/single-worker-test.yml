@@ -1,0 +1,80 @@
+name: Single Worker Test
+
+on:
+  workflow_dispatch:
+
+env:
+  MANAGER_HOST: 165.232.134.47
+  NATS_HOST: 165.232.134.47
+  NATS_PORT: 4222
+  REDIS_HOST: 165.232.134.47
+  REDIS_PORT: 6379
+  POSTGRES_HOST: 165.232.134.47
+  POSTGRES_PORT: 5432
+  POSTGRES_DB: mcp_manager
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: postgres
+  DOCKER_IMAGE: test123434sdd/mcp-remote-worker:latest
+
+jobs:
+  test-worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: 🔐 Docker Hub Login
+        run: |
+          echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u test123434sdd --password-stdin
+
+      - name: 📥 Pull Docker Image
+        run: |
+          docker pull ${{ env.DOCKER_IMAGE }}
+
+      - name: 🚀 Spawn Test Worker
+        run: |
+          WORKER_ID="github-test-single-${{ github.run_id }}"
+          
+          echo "═══════════════════════════════════════════════════════════"
+          echo "🚀 Spawning Test Worker"
+          echo "═══════════════════════════════════════════════════════════"
+          echo "Worker ID: $WORKER_ID"
+          echo "Manager: ${{ env.MANAGER_HOST }}"
+          
+          docker run -d \
+            --name test-worker \
+            -e MANAGER_HOST=${{ env.MANAGER_HOST }} \
+            -e NATS_HOST=${{ env.NATS_HOST }} \
+            -e NATS_PORT=${{ env.NATS_PORT }} \
+            -e REDIS_HOST=${{ env.REDIS_HOST }} \
+            -e REDIS_PORT=${{ env.REDIS_PORT }} \
+            -e POSTGRES_HOST=${{ env.POSTGRES_HOST }} \
+            -e POSTGRES_PORT=${{ env.POSTGRES_PORT }} \
+            -e POSTGRES_DB=${{ env.POSTGRES_DB }} \
+            -e POSTGRES_USER=${{ env.POSTGRES_USER }} \
+            -e POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }} \
+            -e WORKER_ID="$WORKER_ID" \
+            -e HOSTNAME="github-test-single" \
+            ${{ env.DOCKER_IMAGE }}
+          
+          sleep 10
+          docker logs test-worker
+          
+          echo "✅ Worker spawned and running"
+
+      - name: 🔄 Keep Worker Running
+        run: |
+          echo "═══════════════════════════════════════════════════════════"
+          echo "⏱️  Worker will run for 30 minutes"
+          echo "═══════════════════════════════════════════════════════════"
+          
+          for i in {1..30}; do
+            echo "Minute $i/30 - Worker status:"
+            docker ps | grep test-worker || echo "Worker stopped!"
+            sleep 60
+          done
+
+      - name: 🛑 Cleanup
+        if: always()
+        run: |
+          docker stop test-worker || true
+          docker rm test-worker || true
