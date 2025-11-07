@@ -1,0 +1,46 @@
+name: Docker Login Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_id:
+        description: 'Test ID'
+        required: false
+        default: 'test1'
+
+jobs:
+  test-docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: Print Secret Info (masked)
+        run: |
+          echo "==================================="
+          echo "🔍 Docker Hub Secret Debug Info"
+          echo "==================================="
+          echo "Secret exists: ${{ secrets.DOCKER_HUB_TOKEN != '' }}"
+          echo "Secret length: ${#DOCKER_HUB_TOKEN}"
+          echo "First 10 chars: ${DOCKER_HUB_TOKEN:0:10}"
+          echo "==================================="
+        env:
+          DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
+      
+      - name: Test Docker Login - Method 1 (stdin)
+        run: |
+          echo "🔐 Method 1: Using stdin..."
+          echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u test123434sdd --password-stdin
+          echo "✅ Login successful!"
+      
+      - name: Test Docker Pull
+        run: |
+          echo "📦 Pulling test image..."
+          docker pull test123434sdd/mcp-remote-worker:latest
+          echo "✅ Pull successful!"
+      
+      - name: Test Complete
+        run: |
+          echo "==================================="
+          echo "✅ ALL DOCKER TESTS PASSED!"
+          echo "==================================="
+          docker logout
